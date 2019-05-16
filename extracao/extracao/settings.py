@@ -14,7 +14,7 @@ BOT_NAME = 'extracao'
 SPIDER_MODULES = ['extracao.spiders']
 NEWSPIDER_MODULE = 'extracao.spiders'
 
-
+FEED_EXPORT_ENCODING  = 'utf-8'
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'extracao (+http://www.yourdomain.com)'
 
