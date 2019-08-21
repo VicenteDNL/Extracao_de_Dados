@@ -22,20 +22,42 @@ class AranhaSpider(scrapy.Spider):
         linkDocs = response.css('td[headers="t3"] a::attr(href)').extract()
         next_page = response.css('.pagination  li:last-child > a::attr(href)').get()
         for link in linkDocs:
-            yield response.follow(link, self.infoArtigo)
+            yield response.follow(link+"?mode=full", self.infoArtigo)
         if next_page is not None:
             next_page = response.urljoin(next_page)
             yield scrapy.Request(next_page, callback=self.parse)     
 
     def infoArtigo(self, response):
         itens = ExtracaoItem()
-        titulo = response.css('td[class="metadataFieldValue dc_title"]::text').extract()
-        resumo = response.css('td[class="metadataFieldValue dc_description_abstract"]::text').extract()
-        data =  response.css('td[class="metadataFieldValue dc_date_issued"]::text').extract()
+        tags  = response.css('tr td[headers="s1"]::text').extract()
+        conteudo =  response.css('tr td[headers="s2"]::text').extract()
 
-        itens['titulo']= titulo
-        itens['resumo']= resumo
-        itens['data']= data
+        autores =[]
+        palavrachave=[]
+        addTitulo = False
+        addResumo =False
+        for i in range (len(tags)):
+            if tags[i]=='dc.title':
+                if addTitulo==False:
+                    itens['titulo']= conteudo[i]
+                    addTitulo=True
+            elif tags[i]=='dc.description.abstract':
+                if addResumo==False:
+                    itens['resumo']= conteudo[i]
+                    addResumo=True
+            elif tags[i]=='dc.contributor.author':
+                autores.append(conteudo[i])
+            elif tags[i]=='dc.date.issued':
+                itens['data']= conteudo[i]
+            elif tags[i]=='dc.identifier.uri':
+                itens['url']= conteudo[i]
+            elif tags[i]=='dc.type':
+                itens['tipo']= conteudo[i]
+            elif tags[i]=='dc.subject.keyword':
+                palavrachave.append(conteudo[i])
+        itens['autores']= autores
+        itens['palavrachave']= palavrachave
+
         
         yield itens
 

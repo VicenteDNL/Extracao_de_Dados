@@ -12,22 +12,41 @@ class SpiderUfrgsSpider(scrapy.Spider):
     def parse(self, response):
         linkDocs = response.css('div[class="col-sm-9 artifact-description"] a::attr(href)').extract()
         
-        next_page = response.xpath('.pagination  li:last-child > a::attr(href)').get()
+        next_page = response.css('.pagination  li:last-child > a::attr(href)').get()
 
         for link in linkDocs:
-            yield response.follow(link, self.infoArtigo)
+            yield response.follow(link+"?show=full", self.infoArtigo)
         if next_page is not None:
             next_page = response.urljoin(next_page)
             yield scrapy.Request(next_page, callback=self.parse)     
 
     def infoArtigo(self, response):
         itens = ExtracaoItem()
-        titulo = response.css('  div.item-summary-view-metadata h2 ::text').extract()
-        resumo = response.xpath('//*[@id="abstract-to-hide-pt_BR" or @id="abstract-to-hide-pt"]/text()').extract()
-        data =  response.css(' div.simple-item-view-date.word-break.item-page-field-wrapper.table::text').extract()
+        tags  = response.css('td[class="label-cell"]::text').extract()
+        conteudo =  response.css('td[style="text-align: justify;"]::text').extract()
 
-        itens['titulo']= titulo
-        itens['resumo']= resumo
-        itens['data']= data
-        
+
+        autores =[]
+        palavrachave=[]
+    
+        addResumo =False
+        for i in range (len(tags)):
+            if tags[i]=='dc.title':
+                itens['titulo']= conteudo[i]
+            elif tags[i]=='dc.description.abstract':
+                if addResumo==False:
+                    itens['resumo']= conteudo[i]
+                    addResumo=True
+            elif tags[i]=='dc.contributor.author':
+                autores.append(conteudo[i])
+            elif tags[i]=='dc.date.issued':
+                itens['data']= conteudo[i]
+            elif tags[i]=='dc.identifier.uri':
+                itens['url']= conteudo[i]
+            elif tags[i]=='dc.type':
+                itens['tipo']= conteudo[i]
+            elif tags[i]=='dc.subject':
+                palavrachave.append(conteudo[i])
+        itens['autores']= autores
+        itens['palavrachave']= palavrachave
         yield itens
